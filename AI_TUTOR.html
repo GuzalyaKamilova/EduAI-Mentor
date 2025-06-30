@@ -1,0 +1,536 @@
+﻿<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shaxsiy AI Tutor</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.21.4/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body className="bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const initialQuestions = {
+      matematika: {
+        beginner: [
+          { id: 1, text: "2 + 2 = ?", options: ["3", "4", "5"], correct: "4" },
+          { id: 2, text: "10 - 3 = ?", options: ["6", "7", "8"], correct: "7" },
+          { id: 3, text: "5 + 4 = ?", options: ["8", "9", "10"], correct: "9" },
+        ],
+        intermediate: [
+          { id: 1, text: "5 × 3 = ?", options: ["12", "15", "18"], correct: "15" },
+          { id: 2, text: "20 ÷ 4 = ?", options: ["4", "5", "6"], correct: "5" },
+          { id: 3, text: "2 × 8 = ?", options: ["14", "16", "18"], correct: "16" },
+        ],
+        advanced: [
+          { id: 1, text: "x² + 2x + 1 = 0 tenglamaning yechimi?", options: ["x = -1", "x = 1", "x = 0"], correct: "x = -1" },
+          { id: 2, text: "3x - 9 = 0 tenglamaning yechimi?", options: ["x = 2", "x = 3", "x = 4"], correct: "x = 3" },
+          { id: 3, text: "x² - 4 = 0 tenglamaning yechimi?", options: ["x = ±2", "x = ±4", "x = 0"], correct: "x = ±2" },
+        ],
+      },
+      informatika: {
+        beginner: [
+          { id: 1, text: "Python'da print() funksiyasi nima qiladi?", options: ["O'chiradi", "Chop etadi", "Saqlaydi"], correct: "Chop etadi" },
+          { id: 2, text: "RAM nima uchun ishlatiladi?", options: ["Doimiy xotira", "Vaqtinchalik xotira", "Tashqi xotira"], correct: "Vaqtinchalik xotira" },
+          { id: 3, text: "CPU nima?", options: ["Markaziy protsessor", "Xotira bloki", "Displey"], correct: "Markaziy protsessor" },
+        ],
+        intermediate: [
+          { id: 1, text: "Python'da ro'yxat yaratish uchun qaysi belgi ishlatiladi?", options: ["{}", "[]", "()"], correct: "[]" },
+          { id: 2, text: "Algoritmning asosiy bosqichi nima?", options: ["Kiritish", "Chiqarish", "IkKalasi ham"], correct: "IkKalasi ham" },
+          { id: 3, text: "HTML nima uchun ishlatiladi?", options: ["Dasturlash", "Veb-sahifa tuzish", "Ma'lumotlar bazasi"], correct: "Veb-sahifa tuzish" },
+        ],
+        advanced: [
+          { id: 1, text: "SQLda ma'lumotlarni saralash uchun qaysi operator ishlatiladi?", options: ["ORDER BY", "GROUP BY", "SELECT"], correct: "ORDER BY" },
+          { id: 2, text: "API nima?", options: ["Dasturiy interfeys", "Operatsion tizim", "Ma'lumotlar bazasi"], correct: "Dasturiy interfeys" },
+          { id: 3, text: "Python'da 'try-except' nima uchun ishlatiladi?", options: ["Xatolar bilan ishlash", "Fayllarni o'qish", "Tsikl yaratish"], correct: "Xatolar bilan ishlash" },
+        ],
+      },
+    };
+
+    const learningMaterials = {
+      matematika: {
+        beginner: { title: "Matematika asoslari", content: "Oddiy qo'shish va ayirish bo'yicha darslar. Tavsiya: Qo'shish va ayirish amaliy mashqlarni bajarish.", courseLink: "https://www.khanacademy.org/math" },
+        intermediate: { title: "O'rta darajadagi matematika", content: "Ko'paytirish va bo'lish bo'yicha darslar. Tavsiya: Ko'paytirish jadvalidan foydalaning.", courseLink: "https://www.khanacademy.org/math" },
+        advanced: { title: "Ilg'or matematika", content: "Kvadrat tenglamalar va ularning yechimlari haqida darslar. Tavsiya: Algebra bo'yicha qo'shimcha kitoblarni o'qing.", courseLink: "https://www.khanacademy.org/math" },
+      },
+      informatika: {
+        beginner: { title: "Informatika asoslari", content: "Kompyuter tuzilishi va dasturlash asoslari. Tavsiya: Python dasturlash asoslarini o'rganing.", courseLink: "https://www.codecademy.com/learn/learn-python-3" },
+        intermediate: { title: "O'rta darajadagi informatika", content: "Python dasturlash tili va algoritmlar asoslari. Tavsiya: Oddiy algoritmlarni yozib ko'ring.", courseLink: "https://www.codecademy.com/learn/learn-python-3" },
+        advanced: { title: "Ilg'or informatika", content: "Ma'lumotlar bazasi va tarmoq texnologiyalari. Tavsiya: SQL va APIlar bo'yicha darslarni ko'ring.", courseLink: "https://www.codecademy.com/learn/paths/data-science" },
+      },
+    };
+
+    function App() {
+      const [step, setStep] = useState("register");
+      const [name, setName] = useState("");
+      const [grade, setGrade] = useState("");
+      const [subject, setSubject] = useState("");
+      const [currentQuestion, setCurrentQuestion] = useState(0);
+      const [score, setScore] = useState(0);
+      const [level, setLevel] = useState("beginner");
+      const [students, setStudents] = useState(() => {
+        const saved = localStorage.getItem("students");
+        return saved ? JSON.parse(saved) : [];
+      });
+      const [teachers, setTeachers] = useState(() => {
+        const saved = localStorage.getItem("teachers");
+        return saved ? JSON.parse(saved) : [];
+      });
+      const [showLeaderboard, setShowLeaderboard] = useState(false);
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [adminQuestions, setAdminQuestions] = useState(initialQuestions);
+      const [newQuestion, setNewQuestion] = useState({ text: "", options: ["", "", ""], correct: "", subject: "", level: "beginner" });
+      const [teacherName, setTeacherName] = useState("");
+      const [schoolNumber, setSchoolNumber] = useState("");
+      const [teacherEmail, setTeacherEmail] = useState("");
+      const [loginEmail, setLoginEmail] = useState("");
+      const [loginName, setLoginName] = useState("");
+
+      useEffect(() => {
+        localStorage.setItem("students", JSON.stringify(students));
+        localStorage.setItem("teachers", JSON.stringify(teachers));
+      }, [students, teachers]);
+
+      const handleRegister = () => {
+        if (name && grade && subject) {
+          setStep("quiz");
+        } else {
+          alert("Iltimos, barcha maydonlarni to'ldiring!");
+        }
+      };
+
+      const handleTeacherRegister = () => {
+        if (teacherName && schoolNumber && teacherEmail) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(teacherEmail)) {
+            alert("Iltimos, to'g'ri elektron pochta manzilini kiriting!");
+            return;
+          }
+          setTeachers([...teachers, { name: teacherName, schoolNumber, email: teacherEmail }]);
+          alert("O'qituvchi muvaffaqiyatli ro'yxatdan o'tdi!");
+          setStep("adminLogin");
+          setTeacherName("");
+          setSchoolNumber("");
+          setTeacherEmail("");
+        } else {
+          alert("Iltimos, barcha maydonlarni to'ldiring!");
+        }
+      };
+
+      const handleTeacherLogin = () => {
+        const teacher = teachers.find(t => t.email === loginEmail && t.name === loginName);
+        if (teacher) {
+          setIsAdmin(true);
+          setStep("admin");
+          setLoginEmail("");
+          setLoginName("");
+        } else {
+          alert("Noto'g'ri F.I.Sh. yoki elektron pochta!");
+        }
+      };
+
+      const handleAnswer = (answer) => {
+        if (!adminQuestions[subject] || !adminQuestions[subject][level]) {
+          alert("Bu fan bo'yicha savollar mavjud emas!");
+          resetToHome();
+          return;
+        }
+        if (answer === adminQuestions[subject][level][currentQuestion].correct) {
+          setScore(score + 1);
+        }
+
+        if (currentQuestion + 1 < adminQuestions[subject][level].length) {
+          setCurrentQuestion(currentQuestion + 1);
+        } else {
+          const newStudent = { name, grade, subject, score, level };
+          setStudents([...students, newStudent]);
+          setStep("result");
+        }
+      };
+
+      const handleNextLevel = () => {
+        if (score >= 2 && level === "beginner") {
+          setLevel("intermediate");
+          setStep("quiz");
+          setCurrentQuestion(0);
+          setScore(0);
+        } else if (score >= 2 && level === "intermediate") {
+          setLevel("advanced");
+          setStep("quiz");
+          setCurrentQuestion(0);
+          setScore(0);
+        } else {
+          alert("Keyingi bosqichga o'tish uchun kamida 2 ta to'g'ri javob kerak!");
+        }
+      };
+
+      const resetToHome = () => {
+        setStep("register");
+        setName("");
+        setGrade("");
+        setSubject("");
+        setCurrentQuestion(0);
+        setScore(0);
+        setLevel("beginner");
+        setShowLeaderboard(false);
+        setIsAdmin(false);
+      };
+
+      const handleAddQuestion = () => {
+        if (newQuestion.text && newQuestion.options.every(opt => opt) && newQuestion.correct && newQuestion.subject && newQuestion.level) {
+          setAdminQuestions(prev => ({
+            ...prev,
+            [newQuestion.subject]: {
+              ...prev[newQuestion.subject] || {},
+              [newQuestion.level]: [
+                ...(prev[newQuestion.subject]?.[newQuestion.level] || []),
+                {
+                  id: (prev[newQuestion.subject]?.[newQuestion.level]?.length || 0) + 1,
+                  text: newQuestion.text,
+                  options: newQuestion.options,
+                  correct: newQuestion.correct,
+                },
+              ],
+            },
+          }));
+          setNewQuestion({ text: "", options: ["", "", ""], correct: "", subject: "", level: "beginner" });
+          alert("Savol muvaffaqiyatli qo'shildi!");
+        } else {
+          alert("Iltimos, barcha maydonlarni to'ldiring!");
+        }
+      };
+
+      const sortedStudents = [...students].sort((a, b) => b.score - a.score);
+      const groupedStudents = students.reduce((acc, student) => {
+        acc[student.grade] = acc[student.grade] || [];
+        acc[student.grade].push(student);
+        return acc;
+      }, {});
+
+      return (
+        <div className="min-h-screen bg-opacity-50 bg-gray-100 flex flex-col items-center p-4">
+          <div className="w-full flex justify-end">
+            <button
+              onClick={() => setStep("adminLogin")}
+              className="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 mb-4"
+            >
+              Admin kirish
+            </button>
+          </div>
+          <h1 className="text-4xl font-bold mb-8 text-blue-800 text-center">
+            O‘quvchilarning bilim darajasiga moslashtirilgan shaxsiy sun’iy intellekt tutor tizimi
+          </h1>
+          {step === "register" && !isAdmin && (
+            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-800">Ro‘yxatdan o‘tish</h2>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="F.I.Sh."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Sinf raqami (masalan, 9)"
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Fan tanlang</option>
+                  <option value="matematika">Matematika</option>
+                  <option value="informatika">Informatika</option>
+                  <option value="ona_tili">Ona tili</option>
+                  <option value="rus_tili">Rus tili</option>
+                  <option value="ingliz_tili">Ingliz tili</option>
+                  <option value="tarix">Tarix</option>
+                </select>
+                <button
+                  onClick={handleRegister}
+                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                >
+                  Ro‘yxatdan o‘tish
+                </button>
+                <button
+                  onClick={() => setShowLeaderboard(true)}
+                  className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Reytingni ko‘rish
+                </button>
+              </div>
+            </div>
+          )}
+          {step === "adminLogin" && (
+            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-800">O‘qituvchi kirish</h2>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="F.I.Sh."
+                  value={loginName}
+                  onChange={(e) => setLoginName(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Elektron pochta"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleTeacherLogin}
+                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                >
+                  Kirish
+                </button>
+                <button
+                  onClick={() => setStep("teacherRegister")}
+                  className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Ro‘yxatdan o‘tish
+                </button>
+                <button
+                  onClick={resetToHome}
+                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+                >
+                  Bosh sahifaga qaytish
+                </button>
+              </div>
+            </div>
+          )}
+          {step === "teacherRegister" && (
+            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-800">O‘qituvchi ro‘yxatdan o‘tish</h2>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="F.I.Sh."
+                  value={teacherName}
+                  onChange={(e) => setTeacherName(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Maktab raqami (masalan, 45)"
+                  value={schoolNumber}
+                  onChange={(e) => setSchoolNumber(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="email"
+                  placeholder="Elektron pochta"
+                  value={teacherEmail}
+                  onChange={(e) => setTeacherEmail(e.target.value)}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleTeacherRegister}
+                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                >
+                  Ro‘yxatdan o‘tish
+                </button>
+                <button
+                  onClick={() => setStep("adminLogin")}
+                  className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                >
+                  Kirish sahifasiga qaytish
+                </button>
+              </div>
+            </div>
+          )}
+          {step === "quiz" && (
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-xl font-semibold mb-4">
+                Savol {currentQuestion + 1}: {adminQuestions[subject]?.[level]?.[currentQuestion]?.text || "Savollar mavjud emas"}
+              </h2>
+              <div className="space-y-2">
+                {adminQuestions[subject]?.[level]?.[currentQuestion]?.options?.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswer(option)}
+                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                  >
+                    {option}
+                  </button>
+                )) || <p>Savollar topilmadi.</p>}
+              </div>
+            </div>
+          )}
+          {step === "result" && (
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-xl font-semibold mb-4">
+                {name}, sizning darajangiz: {level === "beginner" ? "Boshlang‘ich" : level === "intermediate" ? "O‘rta" : "Ilg‘or"}
+              </h2>
+              <p className="mb-4">Sizning ballingiz: {score}/3</p>
+              <h3 className="text-lg font-medium mb-2">
+                {learningMaterials[subject]?.[level]?.title || "Materiallar topilmadi"}
+              </h3>
+              <p className="mb-4">{learningMaterials[subject]?.[level]?.content || "Tavsiyalar mavjud emas"}</p>
+              {score < 2 && learningMaterials[subject]?.[level]?.courseLink && (
+                <p className="mb-4">
+                  Qo‘shimcha o‘qish uchun:{" "}
+                  <a
+                    href={learningMaterials[subject][level].courseLink}
+                    target="_blank"
+                    className="text-blue-500 underline"
+                  >
+                    Onlayn kurs
+                  </a>
+                </p>
+              )}
+              {score >= 2 && level !== "advanced" && (
+                <button
+                  onClick={handleNextLevel}
+                  className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 mr-2"
+                >
+                  Keyingi bosqich
+                </button>
+              )}
+              <button
+                onClick={resetToHome}
+                className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+              >
+                Bosh sahifaga qaytish
+              </button>
+            </div>
+          )}
+          {step === "admin" && isAdmin && (
+            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-6 text-gray-800">Admin paneli: Savol qo‘shish</h2>
+              <div className="space-y-4">
+                <select
+                  value={newQuestion.subject}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, subject: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Fan tanlang</option>
+                  <option value="matematika">Matematika</option>
+                  <option value="informatika">Informatika</option>
+                  <option value="ona_tili">Ona tili</option>
+                  <option value="rus_tili">Rus tili</option>
+                  <option value="ingliz_tili">Ingliz tili</option>
+                  <option value="tarix">Tarix</option>
+                </select>
+                <select
+                  value={newQuestion.level}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, level: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="beginner">Boshlang‘ich</option>
+                  <option value="intermediate">O‘rta</option>
+                  <option value="advanced">Ilg‘or</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Savol matni"
+                  value={newQuestion.text}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {newQuestion.options.map((option, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    placeholder={`Javob varianti ${index + 1}`}
+                    value={option}
+                    onChange={(e) => {
+                      const newOptions = [...newQuestion.options];
+                      newOptions[index] = e.target.value;
+                      setNewQuestion({ ...newQuestion, options: newOptions });
+                    }}
+                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ))}
+                <input
+                  type="text"
+                  placeholder="To‘g‘ri javob"
+                  value={newQuestion.correct}
+                  onChange={(e) => setNewQuestion({ ...newQuestion, correct: e.target.value })}
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleAddQuestion}
+                  className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+                >
+                  Savolni qo‘shish
+                </button>
+                <button
+                  onClick={resetToHome}
+                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+                >
+                  Bosh sahifaga qaytish
+                </button>
+              </div>
+            </div>
+          )}
+          {showLeaderboard && (
+            <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg mt-4">
+              <h2 className="text-xl font-semibold mb-4">Reyting jadvali (Sinflar bo‘yicha)</h2>
+              {Object.keys(groupedStudents).length === 0 ? (
+                <p>Ro‘yxatda o‘quvchilar yo‘q.</p>
+              ) : (
+                Object.keys(groupedStudents).sort().map((grade) => (
+                  <div key={grade} className="mb-6">
+                    <h3 className="text-lg font-medium mb-2">{grade}-sinf</h3>
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr>
+                          <th className="p-2">F.I.Sh.</th>
+                          <th className="p-2">Fan</th>
+                          <th className="p-2">Ball</th>
+                          <th className="p-2">Daraja</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupedStudents[grade].sort((a, b) => b.score - a.score).map((student, index) => (
+                          <tr key={index}>
+                            <td className="p-2">{student.name}</td>
+                            <td className="p-2">{student.subject}</td>
+                            <td className="p-2">{student.score}</td>
+                            <td className="p-2">{student.level === "beginner" ? "Boshlang‘ich" : student.level === "intermediate" ? "O‘rta" : "Ilg‘or"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))
+              )}
+              <button
+                onClick={() => setShowLeaderboard(false)}
+                className="mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
+              >
+                Orqaga
+              </button>
+            </div>
+          )}
+          <footer className="w-full bg-gray-800 text-white py-4 mt-8">
+            <div className="max-w-4xl mx-auto px-4 text-center">
+              <h3 className="text-lg font-semibold mb-2">Muallif</h3>
+              <p className="mb-2">KAMILOVA GUZALYA RUSTAMOVNA</p>
+              <h3 className="text-lg font-semibold mb-2">Manzil</h3>
+              <p className="mb-2">Jizzax viloyati, JDPU</p>
+              <h3 className="text-lg font-semibold mb-2">Elektron pochta</h3>
+              <p className="mb-4">
+                <a href="mailto:kamilovagulziya@jdpu.uz" className="underline">kamilovagulziya@jdpu.uz</a>
+              </p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById("root"));
+  </script>
+</body>
+</html>
